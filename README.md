@@ -104,6 +104,8 @@ Con `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` la ficha y el historial viven e
 
 Migración: `supabase/migrations/20261109160000_obrador_schema.sql`. Hay que exponer el schema `obrador` en la Data API. Los precios de ganado no se inventan: la tabla `precios_ganado` empieza vacía y el cron de SNIIM no carga nada hasta que se encienda a propósito.
 
+La cuenta de Vercel es Hobby, así que `vercel.json` registra solo dos crons, una vez al día: `/api/cron/dispatch` (15:00 UTC) y `/api/cron/daily` (01:30 UTC). Las rutas de recordatorios, resumen, salud y SNIIM siguen existiendo para llamarlas a mano. La cola manda un mensaje por invocación; el escalonado de cada minuto pide plan Pro.
+
 ```bash
 npm test
 ```
