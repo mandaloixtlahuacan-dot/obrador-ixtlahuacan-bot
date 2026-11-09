@@ -9,6 +9,8 @@ import type {
   Cita,
   Cliente,
   CompraForrajera,
+  InteresGanado,
+  InventarioGanado,
   LeadFlags,
   PedidoCarne,
   PrecioGanado,
@@ -232,8 +234,6 @@ export class SupabaseStore implements Store {
       id: String(r.id),
       producto: String(r.producto),
       presentacion: (r.presentacion as string) ?? null,
-      precioPromo: Number(r.precio_promo),
-      precioNormal: r.precio_normal == null ? null : Number(r.precio_normal),
       vigenteHasta: String(r.vigente_hasta),
       cargadaPor: (r.cargada_por as string) ?? null,
     }));
@@ -381,6 +381,50 @@ export class SupabaseStore implements Store {
       expiresAt: String(r.expires_at),
       used: Boolean(r.used),
     };
+  }
+
+  async listInventario(): Promise<InventarioGanado[]> {
+    const { data, error } = await this.db
+      .from("inventario_ganado")
+      .select("*")
+      .order("fecha", { ascending: false });
+    if (error) throw new Error(error.message);
+    return ((data || []) as Row[]).map(inventarioFromRow);
+  }
+
+  async saveInventario(item: InventarioGanado): Promise<void> {
+    must(null, (await this.db.from("inventario_ganado").upsert(inventarioToRow(item))).error);
+  }
+
+  async listIntereses(): Promise<InteresGanado[]> {
+    const { data, error } = await this.db.from("intereses_ganado").select("*");
+    if (error) throw new Error(error.message);
+    return ((data || []) as Row[]).map((r) => ({
+      id: String(r.id),
+      inventarioId: String(r.inventario_id),
+      chatId: String(r.chat_id),
+      nombre: (r.nombre as string) ?? null,
+      telefono: (r.telefono as string) ?? null,
+      queLeInteresa: String(r.que_le_interesa || ""),
+      createdAt: String(r.created_at),
+    }));
+  }
+
+  async saveInteres(item: InteresGanado): Promise<void> {
+    must(
+      null,
+      (
+        await this.db.from("intereses_ganado").insert({
+          id: item.id,
+          inventario_id: item.inventarioId,
+          chat_id: item.chatId,
+          nombre: item.nombre,
+          telefono: item.telefono,
+          que_le_interesa: item.queLeInteresa,
+          created_at: item.createdAt,
+        })
+      ).error,
+    );
   }
 
   private async countLogs(sinceIso: string, untilIso: string, status: string): Promise<number> {
@@ -638,6 +682,42 @@ export class SupabaseStore implements Store {
     if (error) throw new Error(error.message);
     return (data || []) as Row[];
   }
+}
+
+function inventarioToRow(item: InventarioGanado): Row {
+  return {
+    id: item.id,
+    chat_id: item.chatId,
+    publicador_nombre: item.publicadorNombre,
+    publicador_telefono: item.publicadorTelefono,
+    especie: item.especie,
+    tipo: item.tipo,
+    raza: item.raza,
+    cantidad: item.cantidad,
+    pueblo: item.pueblo,
+    notas: item.notas,
+    fecha: item.fecha,
+    estado: item.estado,
+    created_at: item.createdAt,
+  };
+}
+
+function inventarioFromRow(r: Row): InventarioGanado {
+  return {
+    id: String(r.id),
+    chatId: String(r.chat_id),
+    publicadorNombre: (r.publicador_nombre as string) ?? null,
+    publicadorTelefono: (r.publicador_telefono as string) ?? null,
+    especie: String(r.especie),
+    tipo: String(r.tipo || ""),
+    raza: String(r.raza || ""),
+    cantidad: r.cantidad == null ? null : Number(r.cantidad),
+    pueblo: (r.pueblo as string) ?? null,
+    notas: (r.notas as string) ?? null,
+    fecha: String(r.fecha).slice(0, 10),
+    estado: r.estado as InventarioGanado["estado"],
+    createdAt: String(r.created_at),
+  };
 }
 
 function queueToRow(item: QueueItem): Row {

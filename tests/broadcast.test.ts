@@ -319,18 +319,19 @@ describe("topes y horario de la cola", () => {
     });
     expect(items.map((i) => i.chatId)).toEqual([interesado.chatId]);
     expect(items[0].cuerpo).toContain("Ana");
+    expect(items[0].cuerpo).toMatch(/contéstame por aquí/i);
     expect(items[0].cuerpo).toMatch(/ya no/);
+    expect(items[0].cuerpo).not.toContain("Juan");
+    expect(items[0].cuerpo).not.toContain("3310000001");
     expect(items[0].cuerpo).not.toMatch(/bit\.ly|goo\.gl/);
     const otra = avisoVenta(
       {
         nombre: "Luz",
         pueblo: "Mascota",
-        vendedor: "Juan",
         cantidad: "5",
         animal: "bovino",
         raza: "pintas",
         peso: "400 kg",
-        contacto: "Contéstame y te conecto.",
       },
       "otra-semilla",
     );

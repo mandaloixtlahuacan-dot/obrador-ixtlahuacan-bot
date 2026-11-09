@@ -2,6 +2,8 @@ import type {
   Brake,
   Campana,
   Cliente,
+  InteresGanado,
+  InventarioGanado,
   LeadFlags,
   PrecioGanado,
   PromoForrajera,
@@ -40,4 +42,8 @@ export interface Store {
   logSend(entry: SendLog): Promise<void>;
   saveCampana(c: Campana): Promise<void>;
   getCampana(id: string): Promise<Campana | null>;
+  listInventario(): Promise<InventarioGanado[]>;
+  saveInventario(item: InventarioGanado): Promise<void>;
+  listIntereses(): Promise<InteresGanado[]>;
+  saveInteres(item: InteresGanado): Promise<void>;
 }

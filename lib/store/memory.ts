@@ -4,6 +4,8 @@ import type {
   Brake,
   Campana,
   Cliente,
+  InteresGanado,
+  InventarioGanado,
   LeadFlags,
   PrecioGanado,
   PromoForrajera,
@@ -41,6 +43,8 @@ export class MemoryStore implements Store {
   queue: QueueItem[] = [];
   logs: SendLog[] = [];
   campanas = new Map<string, Campana>();
+  inventario: InventarioGanado[] = [];
+  intereses: InteresGanado[] = [];
 
   async ping(): Promise<boolean> {
     return false;
@@ -62,6 +66,13 @@ export class MemoryStore implements Store {
     this.leads.delete(chatId);
     this.queue = this.queue.filter((q) => q.chatId !== chatId);
     this.logs = this.logs.filter((l) => l.chatId !== chatId);
+    const publicados = new Set(
+      this.inventario.filter((i) => i.chatId === chatId).map((i) => i.id),
+    );
+    this.inventario = this.inventario.filter((i) => i.chatId !== chatId);
+    this.intereses = this.intereses.filter(
+      (i) => i.chatId !== chatId && !publicados.has(i.inventarioId),
+    );
   }
 
   async listClientes(): Promise<Cliente[]> {
@@ -201,5 +212,23 @@ export class MemoryStore implements Store {
   async getCampana(id: string): Promise<Campana | null> {
     const c = this.campanas.get(id);
     return c ? structuredClone(c) : null;
+  }
+
+  async listInventario(): Promise<InventarioGanado[]> {
+    return structuredClone(this.inventario);
+  }
+
+  async saveInventario(item: InventarioGanado): Promise<void> {
+    const i = this.inventario.findIndex((row) => row.id === item.id);
+    if (i >= 0) this.inventario[i] = structuredClone(item);
+    else this.inventario.push(structuredClone(item));
+  }
+
+  async listIntereses(): Promise<InteresGanado[]> {
+    return structuredClone(this.intereses);
+  }
+
+  async saveInteres(item: InteresGanado): Promise<void> {
+    this.intereses.push(structuredClone(item));
   }
 }

@@ -98,21 +98,11 @@ export type Cliente = {
   comprasForrajera: CompraForrajera[];
 };
 
-export type Pending =
-  | {
-      kind: "pueblo";
-      step: "origen" | "rancho" | "lejos" | "otro";
-      resume: string;
-    }
-  | {
-      kind: "permiso_numero";
-      ventaId: string;
-      interesadoChatId: string;
-      interesadoNombre: string | null;
-      interesadoPueblo: string | null;
-      raza: string;
-      pedidoEn: string;
-    };
+export type Pending = {
+  kind: "pueblo";
+  step: "origen" | "rancho" | "lejos" | "otro";
+  resume: string;
+};
 
 export type Session = {
   chatId: string;
@@ -152,10 +142,35 @@ export type PromoForrajera = {
   id: string;
   producto: string;
   presentacion: string | null;
-  precioPromo: number;
-  precioNormal: number | null;
   vigenteHasta: string;
   cargadaPor: string | null;
+};
+
+/** Publicación de ganado. No lleva precio ni margen. */
+export type InventarioGanado = {
+  id: string;
+  chatId: string;
+  publicadorNombre: string | null;
+  publicadorTelefono: string | null;
+  especie: string;
+  tipo: string;
+  raza: string;
+  cantidad: number | null;
+  pueblo: string | null;
+  notas: string | null;
+  fecha: string;
+  estado: "activa" | "vendida" | "retirada";
+  createdAt: string;
+};
+
+export type InteresGanado = {
+  id: string;
+  inventarioId: string;
+  chatId: string;
+  nombre: string | null;
+  telefono: string | null;
+  queLeInteresa: string;
+  createdAt: string;
 };
 
 export type QueueItem = {

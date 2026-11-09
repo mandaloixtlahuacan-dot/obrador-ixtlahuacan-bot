@@ -49,6 +49,9 @@ describe("salud y base", () => {
     expect(sql).not.toMatch(/grant\s+[^;]*\sto\s+anon/i);
     expect(sql).not.toMatch(/create policy/i);
     expect(sql).toMatch(/precios_ganado/);
+    expect(sql).toMatch(/create table obrador.inventario_ganado/i);
+    expect(sql).toMatch(/create table obrador.intereses_ganado/i);
+    expect(sql).not.toMatch(/precio_promo/);
     expect(sql).not.toMatch(/latitud|longitud/i);
   });
 });

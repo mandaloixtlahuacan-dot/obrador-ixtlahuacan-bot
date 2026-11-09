@@ -5,7 +5,7 @@ import {
   encargadoNombre,
   loadNegocio,
 } from "@/lib/config";
-import { esNo, esSi, type Command } from "@/lib/commands";
+import { type Command } from "@/lib/commands";
 import { anotarBienvenida, resumenFicha } from "@/lib/crm";
 import type { Deps } from "@/lib/deps";
 import {
@@ -16,12 +16,11 @@ import {
   mensajeSinPromo,
   promosVigentes,
 } from "@/lib/forrajera";
-import { formatPrecioGanado, formatTelefono } from "@/lib/ganado";
+import { formatPrecioGanado } from "@/lib/ganado";
 import { mensajeObrador } from "@/lib/locations";
 import { advancePueblo, PUEBLO_PASO_1 } from "@/lib/pueblo";
 import { fold } from "@/lib/text";
 import { dentroDeHorarioObrador, textoLlamadaManana } from "@/lib/time";
-import { permisoVencido } from "@/lib/tools";
 import type { Cliente, Session } from "@/lib/types";
 import { toMexicoWhatsappJid } from "@/lib/mexicoJid";
 
@@ -130,7 +129,7 @@ export async function replyCommand(opts: {
     cliente.comparteNumeroGeneral = "no";
     cliente.comparteNumeroEn = now.toISOString();
     for (const v of cliente.ventas) v.comparteNumero = false;
-    return "Va, ya no comparto tu número. Si alguien pregunta, le digo que te escriba aquí.";
+    return "Tu número no se comparte con otros. Si alguien se interesa, lo ve el equipo.";
   }
   if (command.type === "no_entiendo") {
     session.misunderstood += 1;
@@ -169,43 +168,10 @@ export async function replyPending(opts: {
       opts.cliente.pueblo = step.done.pueblo;
       opts.cliente.zona = step.done.zona;
       opts.session.pending = null;
-      return `Anotado: ${step.done.pueblo}. ${pending.resume === "la venta" ? "¿A nombre de quién, y te parece si lo anuncio con tu número?" : "Seguimos."}`;
+      return `Anotado: ${step.done.pueblo}. ${pending.resume === "la publicación" ? "Lo dejo en el inventario. Tu número no se comparte." : "Seguimos."}`;
     }
     opts.session.pending = { ...pending, step: step.next || pending.step };
     return step.ask || PUEBLO_PASO_1;
-  }
-  if (pending.kind === "permiso_numero") {
-    const cfg = loadNegocio();
-    if (
-      permisoVencido(pending.pedidoEn, opts.deps.now(), cfg.horas_sin_respuesta_permiso) &&
-      !esSi(opts.text) &&
-      !esNo(opts.text)
-    ) {
-      return null;
-    }
-    if (!esSi(opts.text) && !esNo(opts.text)) return null;
-    const venta = opts.cliente.ventas.find((v) => v.id === pending.ventaId);
-    opts.session.pending = null;
-    if (esSi(opts.text) && venta) {
-      venta.comparteNumero = true;
-      opts.cliente.comparteNumeroGeneral = "si";
-      opts.cliente.comparteNumeroEn = opts.deps.now().toISOString();
-      const tel = formatTelefono(opts.cliente.telefono);
-      const nombre = opts.cliente.nombre || "El ganadero";
-      const pueblo = venta.pueblo || opts.cliente.pueblo || "la zona";
-      if (tel) {
-        await opts.deps.sendText(
-          pending.interesadoChatId,
-          `Hay un ganadero con ${pending.raza}: ${nombre}, en ${pueblo}. Su número es ${tel}. Dile que vienes del Obrador.`,
-        );
-      }
-      return "Listo, ya le pasé tu número. Gracias.";
-    }
-    await opts.deps.sendText(
-      pending.interesadoChatId,
-      "Por ahora no está disponible; te aviso si sale otro.",
-    );
-    return "Va, no comparto tu número. Yo le aviso al interesado.";
   }
   return null;
 }

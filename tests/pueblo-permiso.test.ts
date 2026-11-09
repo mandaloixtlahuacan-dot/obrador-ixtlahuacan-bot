@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { newCliente, newId } from "@/lib/crm";
-import { buscarOfertas, puedeCompartirNumero } from "@/lib/ganado";
+import { newCliente } from "@/lib/crm";
 import { handleWebhook } from "@/lib/webhookHandler";
 import { makeDeps, webhookRequest } from "./helpers";
 import {
@@ -10,15 +9,6 @@ import {
   PUEBLO_LEJOS,
   PUEBLO_PASO_1,
 } from "@/lib/pueblo";
-import type { Cliente } from "@/lib/types";
-
-function ganadero(partial: Partial<Cliente> & Pick<Cliente, "chatId" | "nombre">): Cliente {
-  return {
-    ...newCliente(partial.chatId),
-    ...partial,
-  };
-}
-
 describe("pueblo, máximo 3 opciones", () => {
   it("el primer paso y el de lejos tienen 3 opciones", () => {
     expect(opcionesDe(PUEBLO_PASO_1)).toHaveLength(3);
@@ -76,60 +66,3 @@ describe("pueblo, máximo 3 opciones", () => {
   });
 });
 
-describe("número solo con permiso", () => {
-  it("no entrega el teléfono si no dijeron que sí", () => {
-    const comparte = ganadero({
-      chatId: "5213310000001@s.whatsapp.net",
-      nombre: "Juan Pérez",
-      telefono: "5213310000001@s.whatsapp.net",
-      pueblo: "la Cofradía",
-      zona: "cerca",
-      ventas: [
-        {
-          id: newId(),
-          chatId: "5213310000001@s.whatsapp.net",
-          especie: "bovino",
-          razaTipo: "pintas",
-          cantidad: 5,
-          pesoEdad: "400 kg",
-          pueblo: "la Cofradía",
-          comparteNumero: true,
-          estado: "activa",
-          createdAt: "2026-11-09T15:00:00.000Z",
-        },
-      ],
-    });
-    const privado = ganadero({
-      chatId: "5213310000002@s.whatsapp.net",
-      nombre: "Luis",
-      telefono: "5213310000002@s.whatsapp.net",
-      pueblo: "Ixtlahuacán del Río",
-      zona: "municipio",
-      ventas: [
-        {
-          id: newId(),
-          chatId: "5213310000002@s.whatsapp.net",
-          especie: "bovino",
-          razaTipo: "pinta",
-          cantidad: 2,
-          pesoEdad: null,
-          pueblo: "Ixtlahuacán del Río",
-          comparteNumero: false,
-          estado: "activa",
-          createdAt: "2026-11-09T15:00:00.000Z",
-        },
-      ],
-    });
-    expect(puedeCompartirNumero(privado, privado.ventas[0])).toBe(false);
-    const { mostradas } = buscarOfertas([comparte, privado], {
-      raza: "vacas pintas",
-      pueblo: "la Cofradía",
-    });
-    const juan = mostradas.find((m) => m.cliente.nombre === "Juan Pérez");
-    const luis = mostradas.find((m) => m.cliente.nombre === "Luis");
-    expect(juan?.telefono).toBe("33 1000 0001");
-    expect(luis?.telefono).toBeNull();
-    expect(luis?.puedeCompartir).toBe(false);
-    expect(mostradas[0].cliente.nombre).toBe("Juan Pérez");
-  });
-});

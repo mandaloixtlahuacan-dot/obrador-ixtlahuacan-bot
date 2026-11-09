@@ -7,6 +7,7 @@ import { fold, norm } from "@/lib/text";
 import { buildSystemPrompt } from "@/lib/prompt";
 import type { StoredMessage } from "@/lib/types";
 import { executeTool, marcarVentaVendida, TOOLS, type ToolCtx } from "@/lib/tools";
+import { atenderInventarioYForrajera } from "@/lib/inventario";
 import { replyCommand, replyPending, replySafe, withWelcome } from "@/lib/turn";
 
 const FALLBACK =
@@ -47,7 +48,7 @@ export async function generateReply(
       cliente.zona = direct.zona;
     }
   }
-  await marcarVentaVendida(cliente, userText);
+  await marcarVentaVendida(cliente, userText, deps.store);
 
   const cmd = matchCommand(userText);
   let reply: string | null = null;
@@ -77,6 +78,9 @@ export async function generateReply(
   }
   if (!reply && !deleted) {
     reply = await replyPending({ text: userText, cliente, session, deps });
+  }
+  if (!reply && !deleted) {
+    reply = await atenderInventarioYForrajera(userText, cliente, deps);
   }
   if (!reply && !deleted) {
     reply = await replySafe(userText, deps);

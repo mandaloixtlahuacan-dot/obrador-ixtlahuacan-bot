@@ -28,26 +28,24 @@ export function variantIndex(seed: string, n: number): number {
 export type SaleNotice = {
   nombre: string;
   pueblo: string;
-  vendedor: string;
   cantidad: string;
   animal: string;
   raza: string;
   peso: string;
-  contacto: string;
 };
 
 function fill(p: SaleNotice): string[] {
   const quien = p.nombre ? `Hola ${p.nombre}` : "Hola";
-  const de = p.pueblo ? ` de ${p.pueblo}` : "";
+  const donde = p.pueblo ? ` en ${p.pueblo}` : "";
   const peso = p.peso ? `, unos ${p.peso}` : "";
   const que = [p.cantidad, p.animal, p.raza].filter(Boolean).join(" ");
   const cola =
-    "¿Te interesa? Contéstame. Si ya no quieres avisos, dime 'ya no'.";
+    "Si te interesa, contéstame por aquí. Si ya no quieres avisos, dime 'ya no'.";
   return [
-    `${quien} 👋 ${p.vendedor}${de} vende ${que}${peso}. ${p.contacto} ${cola}`,
-    `${quien}, por tu zona hay ${que}${peso}. Los ofrece ${p.vendedor}${de}. ${p.contacto} ${cola}`,
-    `${quien} 👋 Te paso un aviso: ${p.vendedor}${de} tiene ${que}${peso}. ${p.contacto} ${cola}`,
-    `${quien}, ${p.vendedor}${de} anda vendiendo ${que}${peso}. ${p.contacto} ${cola}`,
+    `${quien} 👋 Hay ${que}${peso}${donde}. ${cola}`,
+    `${quien}, por la zona hay ${que}${peso}${donde}. ${cola}`,
+    `${quien} 👋 Te paso un aviso: hay ${que}${peso}${donde}. ${cola}`,
+    `${quien}, se ofrece ${que}${peso}${donde}. ${cola}`,
   ];
 }
 

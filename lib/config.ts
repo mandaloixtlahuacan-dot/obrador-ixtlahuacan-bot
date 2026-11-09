@@ -46,6 +46,26 @@ export function adminPhone(): string {
   return (process.env.ADMIN_PHONE || "5213312974282@s.whatsapp.net").trim();
 }
 
+export const INTERMEDIARIO_DEFAULT = "5213310184790";
+
+function asWhatsappJid(value: string): string {
+  const v = value.trim();
+  if (!v) return v;
+  return v.includes("@") ? v : `${v}@s.whatsapp.net`;
+}
+
+/** Víctor recibe los intereses de ganado. Default 5213310184790. */
+export function intermediarioPhone(): string {
+  return asWhatsappJid(process.env.INTERMEDIARIO_PHONE || INTERMEDIARIO_DEFAULT);
+}
+
+/** Pedidos de la forrajera. Si no hay variable, van al mismo número del papá. */
+export function forrajeraPedidosPhone(): string {
+  const propio = (process.env.FORRAJERA_PEDIDOS_PHONE || "").trim();
+  if (!propio) return adminPhone();
+  return asWhatsappJid(propio);
+}
+
 export function supabaseConfigured(): boolean {
   return Boolean(
     process.env.SUPABASE_URL?.trim() &&

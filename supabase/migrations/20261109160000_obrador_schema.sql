@@ -152,14 +152,43 @@ create table obrador.precios_ganado (
 );
 create index precios_ganado_idx on obrador.precios_ganado (animal, fecha desc);
 
+-- Sin precio ni margen: la forrajera cotiza aparte y Víctor autoriza.
 create table obrador.promos_forrajera (
   id uuid primary key default gen_random_uuid(),
   producto text not null,
   presentacion text,
-  precio_promo numeric not null,
-  precio_normal numeric,
   vigente_hasta date not null,
   cargada_por text,
+  created_at timestamptz not null default now()
+);
+
+-- Inventario central de ganado. El público no ve al publicador.
+-- No hay columna de precio ni de margen.
+create table obrador.inventario_ganado (
+  id uuid primary key,
+  chat_id text not null references obrador.clientes (chat_id) on delete cascade,
+  publicador_nombre text,
+  publicador_telefono text,
+  especie text not null,
+  tipo text not null default '',
+  raza text not null default '',
+  cantidad numeric,
+  pueblo text,
+  notas text,
+  fecha date not null,
+  estado text not null default 'activa'
+    check (estado in ('activa', 'vendida', 'retirada')),
+  created_at timestamptz not null default now()
+);
+create index inventario_ganado_estado_idx on obrador.inventario_ganado (estado, fecha desc);
+
+create table obrador.intereses_ganado (
+  id uuid primary key,
+  inventario_id uuid not null references obrador.inventario_ganado (id) on delete cascade,
+  chat_id text not null references obrador.clientes (chat_id) on delete cascade,
+  nombre text,
+  telefono text,
+  que_le_interesa text not null,
   created_at timestamptz not null default now()
 );
 

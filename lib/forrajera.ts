@@ -42,10 +42,8 @@ export function promosVigentes(promos: PromoForrajera[], now: Date): PromoForraj
 }
 
 export function mensajePromo(p: PromoForrajera): string {
-  const normal =
-    p.precioNormal != null ? ` (normal $${p.precioNormal})` : "";
   const presentacion = p.presentacion ? ` ${p.presentacion}` : "";
-  return `Hoy en la forrajera: ${p.producto}${presentacion} a $${p.precioPromo}${normal}, hasta el ${p.vigenteHasta}. ¿Te lo aparto?`;
+  return `Hoy en la forrajera hay ${p.producto}${presentacion}, hasta el ${p.vigenteHasta}. ¿Lo pido con el equipo?`;
 }
 
 export function mensajeSinPromo(): string {

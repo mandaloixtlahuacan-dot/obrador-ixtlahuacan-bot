@@ -3,7 +3,7 @@ import { prioridadAviso, type BroadcastConfig } from "@/lib/broadcast/policy";
 import { clienteEnGrupo, newId } from "@/lib/crm";
 import { fold } from "@/lib/text";
 import { mexicoParts } from "@/lib/time";
-import type { Cliente, QueueItem, Venta } from "@/lib/types";
+import type { Cliente, InventarioGanado, QueueItem, Venta } from "@/lib/types";
 
 function sameDay(iso: string, now: Date): boolean {
   return iso.slice(0, 10) === mexicoParts(now).isoDate;
@@ -44,19 +44,14 @@ export function planSaleNotices(opts: {
       esGanadero: c.etiquetas.includes("ganadero"),
       ultimaConversacion: c.ultimaConversacion,
     });
-    const contacto = opts.venta.comparteNumero
-      ? "Si te late, contéstame y te paso el contacto."
-      : "Si te late, contéstame y te conecto.";
     const cuerpo = avisoVenta(
       {
         nombre: c.nombre || "",
-        pueblo: c.pueblo || "",
-        vendedor: opts.seller.nombre || "Un ganadero",
+        pueblo: opts.venta.pueblo || "",
         cantidad: opts.venta.cantidad != null ? String(opts.venta.cantidad) : "",
         animal: opts.venta.especie,
         raza: opts.venta.razaTipo,
         peso: opts.venta.pesoEdad || "",
-        contacto,
       },
       `${c.chatId}:${opts.venta.id}`,
     );
@@ -77,6 +72,47 @@ export function planSaleNotices(opts: {
   }
   items.sort((a, b) => b.priority - a.priority);
   return items.slice(0, opts.cfg.perDay);
+}
+
+/** Avisos de inventario: sin nombre ni número del ganadero. */
+export function planInventarioNotices(opts: {
+  item: InventarioGanado;
+  clientes: Cliente[];
+  cfg: BroadcastConfig;
+  now: Date;
+}): QueueItem[] {
+  if (!opts.cfg.enabled) return [];
+  const items: QueueItem[] = [];
+  for (const c of opts.clientes) {
+    if (c.chatId === opts.item.chatId) continue;
+    if (!c.recibeAvisos || c.fueraDeLista || c.soloResumenSemanal) continue;
+    if (!clienteEnGrupo(c, "todos")) continue;
+    items.push({
+      id: newId(),
+      tipo: "venta",
+      chatId: c.chatId,
+      cuerpo: avisoVenta(
+        {
+          nombre: c.nombre || "",
+          pueblo: opts.item.pueblo || "",
+          cantidad: opts.item.cantidad != null ? String(opts.item.cantidad) : "",
+          animal: opts.item.especie,
+          raza: [opts.item.tipo, opts.item.raza].filter(Boolean).join(" "),
+          peso: "",
+        },
+        `${c.chatId}:${opts.item.id}`,
+      ),
+      promoId: null,
+      priority: 1,
+      status: "pending",
+      notBefore: opts.now.toISOString(),
+      attempts: 0,
+      lastError: null,
+      createdAt: opts.now.toISOString(),
+      sentAt: null,
+    });
+  }
+  return items;
 }
 
 export function planResumenDiario(opts: {

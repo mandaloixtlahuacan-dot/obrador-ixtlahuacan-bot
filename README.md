@@ -61,7 +61,7 @@ ADMIN_PHONE=5213312974282@s.whatsapp.net
 MAX_HISTORY=24
 ```
 
-Las demás (`SUPABASE_*`, `BROADCASTS_ENABLED`, `REMINDERS_ENABLED`, `ADMIN_API_TOKEN`, `CRON_SECRET` y los topes `BROADCAST_*`) están en `.env.example`. `BROADCASTS_ENABLED` arranca en falso.
+Las demás (`SUPABASE_*`, `INTERMEDIARIO_PHONE`, `FORRAJERA_PEDIDOS_PHONE`, `BROADCASTS_ENABLED`, `REMINDERS_ENABLED`, `ADMIN_API_TOKEN`, `CRON_SECRET` y los topes `BROADCAST_*`) están en `.env.example`. `BROADCASTS_ENABLED` arranca en falso.
 
 Nunca commits de `.env`, `.env.local` ni `.secrets.json`.
 
@@ -92,10 +92,12 @@ Ejemplo: `5213312974282@s.whatsapp.net`
 
 - Carne: mismo aviso al admin con `enviar_pedido_a_admin` (un lead y una actualización). Mínimo 10 kg, entrega solo en cabecera, el precio exacto lo da el Obrador.
 - Cuentas al momento solo si `config/negocio.json` trae porción y, si aplica, precio por kg vigente.
-- Ganado, forrajera, citas, vacunas y ficha del cliente. Si un dato de la familia está vacío, el bot dice que alguien del equipo lo confirma.
+- Ganado: inventario central. Quien pregunta ve especie, tipo, raza, cantidad, pueblo y fecha. No ve al ganadero. Si se interesa, el aviso va a `INTERMEDIARIO_PHONE` (por defecto `5213310184790`).
+- Forrajera: el pedido (qué, cuánto, para cuándo, recoge o se lo llevan) va a `FORRAJERA_PEDIDOS_PHONE` o, si no está, a `ADMIN_PHONE`. Sin precio.
+- Citas, vacunas y ficha. Si un dato de la familia está vacío, el bot dice que alguien del equipo lo confirma.
 - El bot no pide ubicación. Si llega un pin, no se guarda.
 - Dos lugares: el Obrador (`https://maps.google.com/?q=20.8552464,-103.2460428`) y la Forrajera El Corral de Piedra (`https://maps.google.com/?q=20.874329,-103.232947`).
-- Avisos masivos apagados salvo `BROADCASTS_ENABLED=true`. Solo a quien ya escribió.
+- Avisos masivos apagados salvo `BROADCASTS_ENABLED=true`. Solo a quien ya escribió, y sin nombre ni número del ganadero.
 - Promos: `POST /api/admin/promos/preview` (no envía) → `POST /api/admin/promos/{id}/send` (un solo uso, 30 min) → `POST /api/admin/promos/{id}/stop`. Header `x-admin-token`.
 
 Con `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` la ficha y el historial viven en el schema `obrador`. Sin esas variables, la carne sigue en memoria.

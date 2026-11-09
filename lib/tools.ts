@@ -1,21 +1,18 @@
 import { calcularPorcion } from "@/lib/carne";
 import { adminPhone, loadNegocio } from "@/lib/config";
-import { anotarBienvenida, especieDe, newId, recomputeEtiquetas } from "@/lib/crm";
+import { especieDe, newId, recomputeEtiquetas } from "@/lib/crm";
 import type { Deps } from "@/lib/deps";
 import { mensajeDosis, mensajeForrajera, mensajePromo, mensajeSinPromo, guiaAlimento, promosVigentes } from "@/lib/forrajera";
-import {
-  buscarOfertas,
-  formatPrecioGanado,
-  formatTelefono,
-  textoOferta,
-} from "@/lib/ganado";
+import { formatPrecioGanado } from "@/lib/ganado";
+import { textoInventarioPublico } from "@/lib/inventario";
 import { notifyAdminLead } from "@/lib/notifyLead";
 import { ofrecerCita } from "@/lib/citas";
 import { mensajeObrador } from "@/lib/locations";
 import { PUEBLO_PASO_1 } from "@/lib/pueblo";
-import type { Cliente, Session, Venta } from "@/lib/types";
+import type { Store } from "@/lib/store/types";
+import type { Cliente, InventarioGanado, Session } from "@/lib/types";
 import { loadBroadcastConfig } from "@/lib/broadcast/policy";
-import { planSaleNotices } from "@/lib/broadcast/plan";
+import { planInventarioNotices } from "@/lib/broadcast/plan";
 import type { LeadArgs } from "@/lib/lead";
 
 export const TOOLS = [
@@ -99,15 +96,15 @@ export const TOOLS = [
     function: {
       name: "registrar_venta",
       description:
-        "Registra animales en venta. comparte_numero solo true si la persona dijo que sí.",
+        "Anota ganado en el inventario central. No pidas ni guardes permiso para compartir el número. No pongas precio.",
       parameters: {
         type: "object",
         properties: {
           animal: { type: "string" },
           raza: { type: "string" },
+          tipo: { type: "string" },
           cantidad: { type: "number" },
           peso_edad: { type: "string" },
-          comparte_numero: { type: "boolean" },
           nombre: { type: "string" },
         },
         required: ["animal"],
@@ -119,7 +116,7 @@ export const TOOLS = [
     function: {
       name: "buscar_ganado",
       description:
-        "Busca ventas activas por raza o tipo. No inventes ganaderos ni teléfonos.",
+        "Lista el inventario activo. Nunca incluyas nombre, número ni dato que identifique al ganadero. No inventes precios.",
       parameters: {
         type: "object",
         properties: { raza: { type: "string" } },
@@ -412,86 +409,63 @@ export async function executeTool(
 async function registrarVenta(
   args: Record<string, unknown>,
   ctx: ToolCtx,
-  cfg: ReturnType<typeof loadNegocio>,
+  _cfg: ReturnType<typeof loadNegocio>,
 ): Promise<Record<string, unknown>> {
   const animal = str(args.animal);
   if (!animal) return { respuesta: "¿Qué animales y cuántos?" };
   if (str(args.nombre)) ctx.cliente.nombre = str(args.nombre);
   if (!ctx.cliente.pueblo) {
-    ctx.session.pending = { kind: "pueblo", step: "origen", resume: "la venta" };
+    ctx.session.pending = { kind: "pueblo", step: "origen", resume: "la publicación" };
     return { respuesta: PUEBLO_PASO_1, need_pueblo: true };
   }
-  const comparte = Boolean(args.comparte_numero);
-  const venta: Venta = {
+  const item: InventarioGanado = {
     id: newId(),
     chatId: ctx.chatId,
-    especie: especieDe(animal + " " + str(args.raza)),
-    razaTipo: str(args.raza) || animal,
+    publicadorNombre: ctx.cliente.nombre,
+    publicadorTelefono: ctx.cliente.telefono,
+    especie: especieDe(`${animal} ${str(args.raza)} ${str(args.tipo)}`),
+    tipo: str(args.tipo),
+    raza: str(args.raza),
     cantidad: Number.isFinite(Number(args.cantidad)) ? Number(args.cantidad) : null,
-    pesoEdad: str(args.peso_edad) || null,
     pueblo: ctx.cliente.pueblo,
-    comparteNumero: comparte,
+    notas: str(args.peso_edad) || null,
+    fecha: ctx.deps.now().toISOString().slice(0, 10),
     estado: "activa",
     createdAt: ctx.deps.now().toISOString(),
   };
-  ctx.cliente.ventas.push(venta);
+  await ctx.deps.store.saveCliente(ctx.cliente);
+  await ctx.deps.store.saveInventario(item);
   ctx.cliente.animales.push({
     id: newId(),
-    especie: venta.especie,
-    razaTipo: venta.razaTipo,
-    cantidad: venta.cantidad,
-    pesoEdad: venta.pesoEdad,
+    especie: item.especie,
+    razaTipo: [item.tipo, item.raza].filter(Boolean).join(" ") || animal,
+    cantidad: item.cantidad,
+    pesoEdad: str(args.peso_edad) || null,
   });
-  if (comparte) {
-    ctx.cliente.comparteNumeroGeneral = "si";
-    ctx.cliente.comparteNumeroEn = ctx.deps.now().toISOString();
-  }
   recomputeEtiquetas(ctx.cliente);
-  ctx.session.topic = `la venta de ${venta.razaTipo}`;
+  ctx.session.topic = "el ganado anotado";
   ctx.taskDone = true;
-  const cant = venta.cantidad != null ? `${venta.cantidad} ` : "";
-  await ctx.deps.sendText(
-    adminPhone(),
-    [
-      "🐄 Venta para avisos",
-      `Chat: ${ctx.chatId}`,
-      `Nombre: ${ctx.cliente.nombre || "—"}`,
-      `Número: ${ctx.cliente.telefono || "—"}`,
-      `${cant}${venta.razaTipo} (${venta.especie})`,
-      `Pueblo: ${venta.pueblo}`,
-      `Peso/edad: ${venta.pesoEdad || "—"}`,
-      `Comparte número: ${comparte ? "sí" : "no"}`,
-    ].join("\n"),
-  );
   const bcfg = loadBroadcastConfig();
-  const todos = await ctx.deps.store.listClientes();
-  const notices = planSaleNotices({
-    venta,
-    seller: ctx.cliente,
-    clientes: todos.filter((c) => c.chatId !== ctx.chatId).concat(ctx.cliente),
-    cfg: bcfg,
-    now: ctx.deps.now(),
-  });
-  if (notices.length && bcfg.enabled) await ctx.deps.store.enqueue(notices);
-  const nombre = ctx.cliente.nombre || "";
-  const peso = venta.pesoEdad ? ` de unos ${venta.pesoEdad}` : "";
+  if (bcfg.enabled) {
+    const todos = await ctx.deps.store.listClientes();
+    const notices = planInventarioNotices({
+      item,
+      clientes: todos,
+      cfg: bcfg,
+      now: ctx.deps.now(),
+    });
+    if (notices.length) await ctx.deps.store.enqueue(notices);
+  }
+  const cant = item.cantidad != null ? `${item.cantidad} ` : "";
   return {
-    respuesta: `Listo${nombre ? `, ${nombre}` : ""}: ${cant}${venta.razaTipo}${peso} en ${venta.pueblo}. Ya va en los avisos de hoy. ¿Ya los vendiste? Avísame y lo quito.`,
-    queued: bcfg.enabled ? notices.length : 0,
+    respuesta: `Quedó anotado: ${cant}${[item.tipo, item.raza].filter(Boolean).join(" ") || item.especie} en ${item.pueblo}. No paso tu número. Si alguien se interesa, alguien del equipo los contacta.`,
+    id: item.id,
     broadcasts_enabled: bcfg.enabled,
-    vence_dias: cfg.ventas_vencen_dias,
   };
 }
 
 async function buscar(raza: string, ctx: ToolCtx): Promise<Record<string, unknown>> {
-  if (!raza) return { respuesta: "¿Qué buscas? Por ejemplo vacas pintas o chivas para cría." };
-  const todos = await ctx.deps.store.listClientes();
-  const others = todos.filter((c) => c.chatId !== ctx.chatId);
-  const { mostradas, hayMas } = buscarOfertas(others, {
-    raza,
-    pueblo: ctx.cliente.pueblo,
-    zona: ctx.cliente.zona,
-  });
+  if (!raza) return { respuesta: "¿Qué buscas? Por ejemplo vacas gordas o becerros." };
   ctx.cliente.busquedas.push({
     id: newId(),
     chatId: ctx.chatId,
@@ -501,75 +475,34 @@ async function buscar(raza: string, ctx: ToolCtx): Promise<Record<string, unknow
     activa: true,
   });
   recomputeEtiquetas(ctx.cliente);
-  if (!mostradas.length) {
-    return {
-      respuesta: `Ahorita no tengo ${raza} registradas. Te anoto y en cuanto alguien las ofrezca te aviso.`,
-    };
+  const items = await ctx.deps.store.listInventario();
+  return { respuesta: textoInventarioPublico(items, raza) };
+}
+
+export async function marcarVentaVendida(
+  cliente: Cliente,
+  texto: string,
+  store?: Store,
+): Promise<boolean> {
+  const t = texto.toLowerCase();
+  if (!/vendi|ya se vend|ya no las tengo|ya las vendi/.test(t)) return false;
+  let changed = false;
+  for (const v of cliente.ventas) {
+    if (v.estado === "activa") {
+      v.estado = "vendida";
+      changed = true;
+    }
   }
-  const lineas: string[] = [];
-  let privados = 0;
-  for (const m of mostradas) {
-    if (m.puedeCompartir && m.telefono) {
-      lineas.push(textoOferta(m));
-    } else {
-      privados++;
-      const sellerSession = await ctx.deps.store.getSession(m.cliente.chatId);
-      sellerSession.pending = {
-        kind: "permiso_numero",
-        ventaId: m.venta.id,
-        interesadoChatId: ctx.chatId,
-        interesadoNombre: ctx.cliente.nombre,
-        interesadoPueblo: ctx.cliente.pueblo,
-        raza,
-        pedidoEn: ctx.deps.now().toISOString(),
-      };
-      await ctx.deps.store.saveSession(sellerSession);
-      const quien = ctx.cliente.nombre || "Alguien";
-      const de = ctx.cliente.pueblo ? ` de ${ctx.cliente.pueblo}` : "";
-      if (m.cliente.telefono) {
-        await ctx.deps.sendText(
-          m.cliente.chatId,
-          `Hola ${m.cliente.nombre || ""}, hay alguien${de} interesado en tus ${m.venta.razaTipo}. ¿Le paso tu número?`.replace(
-            "  ",
-            " ",
-          ),
-        );
+  if (store) {
+    const items = await store.listInventario();
+    for (const item of items) {
+      if (item.chatId === cliente.chatId && item.estado === "activa") {
+        item.estado = "vendida";
+        await store.saveInventario(item);
+        changed = true;
       }
     }
   }
-  const abiertas = lineas.length
-    ? `Hay ${lineas.length} ganadero${lineas.length === 1 ? "" : "s"} con ${raza}: ${lineas.join(" · ")}.`
-    : "";
-  const privado = privados
-    ? "A los que aún no comparten su número ya les pregunté. Si dicen que no, te aviso."
-    : "";
-  const mas = hayMas ? " ¿Quieres ver más?" : "";
-  return { respuesta: `${abiertas} ${privado}${mas}`.trim() };
-}
-
-export async function marcarVentaVendida(cliente: Cliente, texto: string): Promise<boolean> {
-  const t = texto.toLowerCase();
-  if (!/vendi|ya se vend|ya no las tengo|ya las vendi/.test(t)) return false;
-  const activas = cliente.ventas.filter((v) => v.estado === "activa");
-  if (!activas.length) return false;
-  const n = t.match(/vendi\s+(\d+)/);
-  if (n) {
-    const qty = Number(n[1]);
-    const v = activas[activas.length - 1];
-    if (v.cantidad != null) v.cantidad = Math.max(0, v.cantidad - qty);
-    if (v.cantidad === 0) v.estado = "vendida";
-    return true;
-  }
-  for (const v of activas) v.estado = "vendida";
-  return true;
-}
-
-export function permisoVencido(
-  pedidoEn: string,
-  now: Date,
-  horas: number | null,
-): boolean {
-  if (horas == null || !Number.isFinite(horas)) return false;
-  return now.getTime() - Date.parse(pedidoEn) >= horas * 3600 * 1000;
+  return changed;
 }
 
