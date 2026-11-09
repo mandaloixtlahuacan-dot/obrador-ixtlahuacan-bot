@@ -5,8 +5,8 @@
   "timezone": "America/Mexico_City",
   "tone": {
     "style": "amable, claro y cercano — como alguien del pueblo que atiende carnicerías y fondas",
-    "maxEmojisPerMessage": 2,
-    "greeting": "¡Hola! Bienvenido a {{clientName}}. ¿Qué productos te cotizamos?"
+    "maxEmojisPerMessage": 1,
+    "greeting": "¡Hola! ¿Cómo estás? 👋 Soy del Obrador Ixtlahuacán. ¿En qué te ayudamos? ¿Buscas carne o es algo de tus animales?"
   },
   "business": {
     "summary": "Obrador mayorista de carne en Ixtlahuacán del Río, Jalisco. Del corral al obrador (sin revendedores). Público: carnicerías, taquerías, birrierías, fondas, restaurantes, banquetes. Pago solo efectivo. Precios siempre por cotización (nunca inventar montos). Pedido mínimo aproximado 10 kg por producto o pedido. Entrega en cabecera municipal o el cliente recoge en el obrador.",
@@ -41,7 +41,7 @@
       },
       {
         "q": "¿Dónde están?",
-        "a": "Libramiento a Cuquío 612, Ixtlahuacán del Río, Jalisco."
+        "a": "El Obrador: https://maps.google.com/?q=20.8552464,-103.2460428"
       },
       {
         "q": "¿Cuánto cuesta?",
@@ -62,7 +62,8 @@
     ],
     "hoursText": "Lun–Vie 7:00–15:00 · Sáb 7:00–14:00 · Dom cerrado",
     "outOfScope": [
-      "inventar precios o rangos numéricos",
+      "inventar precios, dosis, horarios o porciones",
+      "pedir ubicación, pin o dirección al cliente",
       "prometer disponibilidad de productos fuera del catálogo",
       "diagnósticos médicos o legales",
       "datos de otros clientes"
@@ -71,7 +72,7 @@
   "features": {
     "multiRole": false,
     "orders": true,
-    "geoCoverage": true,
+    "geoCoverage": false,
     "outbox": false,
     "adminLeadTool": true
   }

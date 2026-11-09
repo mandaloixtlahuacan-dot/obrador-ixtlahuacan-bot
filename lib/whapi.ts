@@ -1,3 +1,4 @@
+import { interpretChannelHealth } from "./channel";
 import { toMexicoWhatsappJid } from "./mexicoJid";
 
 function baseUrl(): string {
@@ -42,5 +43,21 @@ export async function sendText(to: string, body: string): Promise<void> {
     throw new Error(
       `Whapi sendText failed status=${res.status} body_len=${text.length}`,
     );
+  }
+}
+
+/** Channel status. Never throws: a down channel is an unhealthy result. */
+export async function fetchChannelHealth(): Promise<{ ok: boolean; status: string }> {
+  const t = process.env.WHAPI_TOKEN || "";
+  if (!t) return { ok: false, status: "unconfigured" };
+  try {
+    const res = await fetch(`${baseUrl()}/health`, {
+      headers: { Authorization: `Bearer ${t}` },
+    });
+    if (!res.ok) return { ok: false, status: `http_${res.status}` };
+    const body: unknown = await res.json().catch(() => null);
+    return interpretChannelHealth(body);
+  } catch {
+    return { ok: false, status: "error" };
   }
 }

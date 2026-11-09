@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Obrador Ixtlahuacán Bot",
-  description: "WhatsApp bot mayorista (Whapi → OpenAI → Vercel)",
+  title: "Obrador + Forrajera",
+  description: "WhatsApp del Obrador y la forrajera (Whapi → OpenAI → Vercel)",
 };
 
 export default function RootLayout({
