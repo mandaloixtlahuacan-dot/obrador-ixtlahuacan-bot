@@ -1,0 +1,32 @@
+{
+  "ubicaciones": {
+    "obrador": {
+      "nombre": "Obrador",
+      "maps": "https://maps.google.com/?q=20.8552464,-103.2460428"
+    },
+    "forrajera": {
+      "nombre": "Forrajera El Corral de Piedra",
+      "maps": "https://maps.google.com/?q=20.874329,-103.232947",
+      "horario": "",
+      "telefono": "",
+      "catalogo": []
+    }
+  },
+  "encargados": {
+    "obrador": "",
+    "forrajera": "",
+    "citas": ""
+  },
+  "hora_llamada": "7:00",
+  "porcion_kg_por_persona": {},
+  "precio_kg": [],
+  "horarios_cita": [],
+  "dias_reabasto": {},
+  "guias_racion": [],
+  "ventas_vencen_dias": null,
+  "busca_vigente_dias": null,
+  "horas_sin_respuesta_permiso": null,
+  "dias_aviso_vacuna": null,
+  "recordatorio_vispera_hora": null,
+  "resumen_diario_hora": null
+}
